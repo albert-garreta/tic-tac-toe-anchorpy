@@ -1,0 +1,4 @@
+{
+  "tests/test_tic_tac_toe.py::test_init": true,
+  "tests/test_tic_tac_toe.py::test_play": true
+}
