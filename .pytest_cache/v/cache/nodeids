@@ -1,5 +1,9 @@
 [
   "tests/test_tic_tac_toe.py::test_init",
+  "tests/test_tic_tac_toe.py::test_not_players_turn",
   "tests/test_tic_tac_toe.py::test_play",
-  "tests/test_tic_tac_toe.py::test_setup_game"
+  "tests/test_tic_tac_toe.py::test_player1_wins",
+  "tests/test_tic_tac_toe.py::test_setup_game",
+  "tests/test_tic_tac_toe.py::test_tile_already_set",
+  "tests/test_tic_tac_toe.py::test_tile_out_of_bounds"
 ]

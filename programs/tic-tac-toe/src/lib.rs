@@ -100,10 +100,12 @@ impl Game {
     }
 
     pub fn current_player_index(&self) -> usize {
-        ((self.turn % 2) - 1) as usize
+        ((self.turn-1) % 2) as usize
     }
 
     pub fn current_player(&self) -> Pubkey {
+        msg!("{}", self.turn);
+        msg!("{}", self.current_player_index());
         self.players[self.current_player_index()]
     }
 
