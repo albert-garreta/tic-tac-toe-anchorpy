@@ -1,5 +1,5 @@
 {
   "tests/test_tic_tac_toe.py::test_init": true,
   "tests/test_tic_tac_toe.py::test_play": true,
-  "tests/test_tic_tac_toe.py::test_player1_wins": true
+  "tests/test_tic_tac_toe.py::test_tile_already_set": true
 }

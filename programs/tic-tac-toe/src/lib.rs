@@ -29,6 +29,13 @@ pub mod tic_tac_toe {
         Ok(())
     }
 
+    pub fn reset_game(ctx: Context<ResetGame>) -> ProgramResult {
+        let game = &mut ctx.accounts.game;
+        game.turn=1;
+        game.state=GameState::Active;
+        game.board=[[None;3];3];
+        Ok(())
+    }
 
     pub fn play(ctx: Context<Play>, tile: Tile) -> ProgramResult {
         let game = &mut ctx.accounts.game; 
@@ -54,6 +61,15 @@ pub struct SetupGame<'info> {
     // See comments above the declaration of MAXIMUM_SIZE
     #[account(init, payer=player_one, space = Game::MAXIMUM_SIZE +8)]
     pub game: Account<'info, Game>, // account where teh game is stored
+    #[account(mut)]
+    pub player_one: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct ResetGame<'info> {
+    #[account(mut)]
+    pub game: Account<'info, Game>,
     #[account(mut)]
     pub player_one: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -104,8 +120,6 @@ impl Game {
     }
 
     pub fn current_player(&self) -> Pubkey {
-        msg!("{}", self.turn);
-        msg!("{}", self.current_player_index());
         self.players[self.current_player_index()]
     }
 

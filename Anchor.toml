@@ -1,5 +1,6 @@
 [features]
 seeds = false
+
 [programs.localnet]
 tic_tac_toe = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
 
