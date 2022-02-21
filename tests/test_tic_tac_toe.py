@@ -12,7 +12,28 @@ from anchorpy import (
     close_workspace,
 )
 import pytest
-import time
+
+
+class KeyPairData(object):
+    def __init__(self, game_kp, player1_kp, player2_kp):
+        self.game_kp = game_kp
+        self.player1_kp = player1_kp
+        self.player2_kp = player2_kp
+
+
+class PlayDataHelper(object):
+    def __init__(
+        self,
+    ):
+        self.player = None
+        self.tile = None
+        self.program = None
+        self.key_pair_data = None
+        self.game_keypair = None
+        self.expected_turn = None
+        self.expected_game_state = None
+        self.expected_board = None
+
 
 # Since our other fixtures have module scope, we need to define
 # this event_loop fixture and give it module scope otherwise
@@ -33,13 +54,6 @@ async def program() -> Program:
     workspace = create_workspace("/Users/alb/dev/solana-practice/tic-tac-toe")
     yield workspace["tic_tac_toe"]
     await close_workspace(workspace)
-
-
-class KeyPairData(object):
-    def __init__(self, game_kp, player1_kp, player2_kp):
-        self.game_kp = game_kp
-        self.player1_kp = player1_kp
-        self.player2_kp = player2_kp
 
 
 @fixture(scope="module")
@@ -69,15 +83,16 @@ async def get_game_state(program: Program, key_pair_data: KeyPairData):
 
 
 @mark.asyncio
-async def play(program: Program, key_pair_data: KeyPairData, player, tile):
-    await program.rpc["play"](
-        tile,
+async def play(play_data):
+
+    await play_data.program.rpc["play"](
+        play_data.tile,
         ctx=Context(
             accounts={
-                "game": key_pair_data.game_kp.public_key,
-                "player_to_move": player.public_key,
+                "game": play_data.game_keypair.public_key,
+                "player_to_move": play_data.player.public_key,
             },
-            signers=[player],
+            signers=[play_data.player],
         ),
     )
 
@@ -98,19 +113,13 @@ async def print_players_info(program: Program, key_pair_data: KeyPairData):
 
 
 @mark.asyncio
-async def play_check_assertions(
-    program: Program,
-    key_pair_data: KeyPairData,
-    expected_turn,
-    expected_game_state,
-    expected_board,
-):
-    game_state = await get_game_state(program, key_pair_data)
-    assert game_state.turn == expected_turn
+async def play_check_assertions(play_data):
+    game_state = await get_game_state(play_data.program, play_data.key_pair_data)
+    assert game_state.turn == play_data.expected_turn
     print(game_state.state)
-    print(expected_game_state)
+    print(play_data.expected_game_state)
     # assert game_state.state == expected_game_state
-    print(expected_board)
+    print(play_data.expected_board)
     print(game_state.board)
     # assert expected_board == game_state.board
 
@@ -183,12 +192,17 @@ async def test_tile_already_set(
     program: Program,
     key_pair_data: KeyPairData,
 ):
-    player1 = key_pair_data.player1_kp
-    await play(program, key_pair_data, player1, tile=program.type["Tile"](x=1, y=1))
-    player2 = key_pair_data.player2_kp
+    play_data = PlayDataHelper()
+    play_data.program = program
+    play_data.game_keypair = key_pair_data.game_kp
+    play_data.player = key_pair_data.player1_kp
+    play_data.tile = program.type["Tile"](x=1, y=1)
+    await play(play_data)
+    play_data.tile = program.type["Tile"](x=1, y=1)
+    play_data.player = key_pair_data.player2_kp
     # await play(program, key_pair_data, player2, tile=program.type["Tile"](x=1, y=1))
     with pytest.raises(Exception):
-        await play(program, key_pair_data, player2, tile=program.type["Tile"](x=1, y=1))
+        await play(play_data)
 
 
 @mark.asyncio
@@ -215,105 +229,60 @@ async def test_player1_wins(
         ),
     )
 
+    play_data = PlayDataHelper()
+
     # First turn
     print("\nTurn 1")
-    tile = program.type["Tile"](x=0, y=0)
-    expected_turn = 2
-    expected_game_state = program.type["GameState"].Active()
-    expected_board = [([X, None, None]), [None, None, None], [None, None, None]]
-    await play(
-        program,
-        key_pair_data,
-        player1,
-        tile,
-    )
-    await play_check_assertions(
-        program,
-        key_pair_data,
-        expected_turn,
-        expected_game_state,
-        expected_board=[[X, None, None], [None, None, None], [None, None, None]],
-    )
+    play_data.tile = program.type["Tile"](x=0, y=0)
+    play_data.player = player1
+    play_data.program = program
+    play_data.key_pair_data = key_pair_data
+    play_data.game_keypair = key_pair_data.game_kp
+    play_data.expected_turn = 2
+    play_data.expected_game_state = program.type["GameState"].Active()
+    play_data.expected_board = [
+        ([X, None, None]),
+        [None, None, None],
+        [None, None, None],
+    ]
+    await play(play_data)
+    await play_check_assertions(play_data)
 
     print("Turn 2")
-    tile = program.type["Tile"](x=1, y=1)
-    expected_turn = 3
-    expected_game_state = program.type["GameState"].Active()
-    expected_board = [([X, None, None]), [None, O, None], [None, None, None]]
-    await play(
-        program,
-        key_pair_data,
-        player2,
-        tile,
-    )
-
-    await play_check_assertions(
-        program,
-        key_pair_data,
-        expected_turn,
-        expected_game_state,
-        expected_board,
-    )
+    play_data.tile = program.type["Tile"](x=1, y=1)
+    play_data.player = player2
+    play_data.expected_turn = 3
+    play_data.expected_game_state = program.type["GameState"].Active()
+    play_data.expected_board = [([X, None, None]), [None, O, None], [None, None, None]]
+    await play(play_data)
+    await play_check_assertions(play_data)
 
     # Make player2 play till winning
     print("Turn 3")
-    tile = program.type["Tile"](x=1, y=0)
-    expected_turn = 4
-    expected_game_state = program.type["GameState"].Active()
-    expected_board = [([X, X, None]), [None, O, None], [None, None, None]]
-    await play(
-        program,
-        key_pair_data,
-        player1,
-        tile,
-    )
-
-    await play_check_assertions(
-        program,
-        key_pair_data,
-        expected_turn,
-        expected_game_state,
-        expected_board,
-    )
+    play_data.tile = program.type["Tile"](x=1, y=0)
+    play_data.player = player1
+    play_data.expected_turn = 4
+    play_data.expected_game_state = program.type["GameState"].Active()
+    play_data.expected_board = [([X, X, None]), [None, O, None], [None, None, None]]
+    await play(play_data)
+    await play_check_assertions(play_data)
 
     # Make player2 play till winning
     print("Turn 4")
-    tile = program.type["Tile"](x=1, y=2)
-    expected_turn = 5
-    expected_game_state = program.type["GameState"].Active()
-    expected_board = [([X, X, None]), [None, O, None], [None, O, None]]
-    await play(
-        program,
-        key_pair_data,
-        player2,
-        tile,
-    )
-
-    await play_check_assertions(
-        program,
-        key_pair_data,
-        expected_turn,
-        expected_game_state,
-        expected_board,
-    )
+    play_data.tile = program.type["Tile"](x=1, y=2)
+    play_data.player = player2
+    play_data.expected_turn = 5
+    play_data.expected_game_state = program.type["GameState"].Active()
+    play_data.expected_board = [([X, X, None]), [None, O, None], [None, O, None]]
+    await play(play_data)
+    await play_check_assertions(play_data)
 
     # Make player2 play till winning
     print("Turn 5")
-    tile = program.type["Tile"](x=2, y=0)
-    expected_turn = 5  # Because the game is won, the turn does not inrease
-    expected_game_state = program.type["GameState"].Won(winner=player1.public_key)
-    expected_board = [([X, X, X]), [None, O, None], [None, O, None]]
-    await play(
-        program,
-        key_pair_data,
-        player1,
-        tile,
-    )
-
-    await play_check_assertions(
-        program,
-        key_pair_data,
-        expected_turn,
-        expected_game_state,
-        expected_board,
-    )
+    play_data.tile = program.type["Tile"](x=2, y=0)
+    play_data.player = player1
+    play_data.expected_turn = 5  # Because the game is won, the turn does not inrease
+    play_data.expected_game_state = program.type["GameState"].Won(winner=player1.public_key)
+    play_data.expected_board = [([X, X, X]), [None, O, None], [None, O, None]]
+    await play(play_data)
+    await play_check_assertions(play_data)
